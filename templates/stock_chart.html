@@ -5,40 +5,73 @@
 </head>
 <body>
 <!-- Plotly chart will be drawn inside this DIV -->
-<div id="myDiv"></div>
+<div id="stockChart"></div>
+
+  <!-- Choose from a list of stocks to show. -->
+  <select id="stockList" onchange="if (this.selectedIndex) plotData();">
+      <option value="-1">--</option>
+      <option value="1">CSCO</option>
+      <option value="2">CVX</option>
+      <option value="3">AAPL</option>
+  </select>
+
+  <!-- Option to show 200 day moving average. -->
+  <label>
+    <input id="toggleAverage" type="checkbox" onchange="toggleAvg();"> 200-Day Moving Average
+  </label>
+
   <script>
-      Plotly.d3.csv("http://localhost:7777/data", function(err, rows){  
+  var movingAvgTrace;
 
-        function unpack(rows, key) {
-          return rows.map(function(row) { return row[key]; });
-        }
+  function toggledChecked() {
+    var isChecked = document.getElementById("toggleAverage").checked;
+    return isChecked;
+  }
 
-        var trace1 = {
-          type: "scatter",
-          mode: "lines",
-          name: 'AAPL High',
-          x: unpack(rows, 'Date'),
-          y: unpack(rows, 'High'),
-          line: {color: '#17BECF'}
-        }
+  function toggleAvg() {
+    if (movingAvgTrace == null) {return;}
 
-        var trace2 = {
-          type: "scatter",
-          mode: "lines",
-          name: 'AAPL Low',
-          x: unpack(rows, 'Date'),
-          y: unpack(rows, 'Low'),
-          line: {color: '#7F7F7F'}
-        }
+    if (toggledChecked()) {
+      Plotly.addTraces("stockChart", movingAvgTrace);
+    } else {
+      Plotly.deleteTraces("stockChart", 2);
+    }
+  }
 
-        var data = [trace1,trace2];
-            
-        var layout = {
-          title: 'AAPL', 
-        };
+  function plotData() {
+    var e = document.getElementById("stockList");
+    var ticker = e.options[e.selectedIndex].text;
+    var url = "data/" + ticker;
 
-        Plotly.newPlot('myDiv', data, layout);
-        })
+    Plotly.d3.csv(url, function(err, rows){
+      function unpack(rows, key) {
+        return rows.map((row) => row[key]);
+      }
+
+      function createTrace(label, xVar, yVar, tColor) {
+          return {
+            type: "scatter",
+            mode: "lines",
+            name: ticker + " " + label,
+            x: unpack(rows, xVar),
+            y: unpack(rows, yVar),
+            line: {color: tColor}
+          };
+      }
+
+      var trace1 = createTrace("High", "Date", "High", "#17BECF");
+      var trace2 = createTrace("Low", "Date", "Low", "#7F7F7F");
+      movingAvgTrace = createTrace("Avg", "Date", "200Day_Avg", "#669900");
+      var data = [trace1,trace2];
+      if (toggledChecked()) {data.push(movingAvgTrace);}
+
+      var layout = {
+        title: ticker + " Stock Price"
+      };
+
+      Plotly.newPlot("stockChart", data, layout);
+    });
+  }
   </script>
 </body>
 </html>
